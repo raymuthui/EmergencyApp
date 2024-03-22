@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <EditTextPreference
+        android:key="localEmergency"
+        android:title="Local Emergency Number"
+        android:summary="Enter the local emergency number"
+        android:inputType="phone"
+        android:defaultValue="+254713208001"
+        android:dialogTitle="Enter Local Emergency Number" />
+
+</PreferenceScreen>
