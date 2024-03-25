@@ -13,6 +13,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "FemiGuard"
+rootProject.name = "InstaSOS"
 include(":app")
  
