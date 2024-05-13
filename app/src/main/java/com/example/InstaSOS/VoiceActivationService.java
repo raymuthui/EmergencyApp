@@ -56,11 +56,18 @@ public class VoiceActivationService extends Service implements RecognitionListen
 
     }
     private void startListening() {
-        mAudioManager.setStreamSolo(AudioManager.STREAM_RING, true);
+//        try {
+//            mAudioManager.setStreamVolume(AudioManager.STREAM_RING, AudioManager.ADJUST_MUTE, 0);
+//        } catch (SecurityException e) {
+//            // Handle the security exception (e.g., show a message to the user)
+//            Log.e(TAG, "SecurityException: Not allowed to change Do Not Disturb state");
+//            // Optionally, revert to default behavior or inform the user
+//        }
 
-        // Start listening for speech
+        // Continue with your other logic
         speechRecognizer.startListening(createRecognizerIntent());
     }
+
 
     private Intent createRecognizerIntent() {
         Intent recognizerIntent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
@@ -72,7 +79,7 @@ public class VoiceActivationService extends Service implements RecognitionListen
     }
 
     private void stopListening() {
-        mAudioManager.setStreamSolo(AudioManager.STREAM_RING, false);
+        mAudioManager.setStreamVolume(AudioManager.STREAM_RING, AudioManager.ADJUST_UNMUTE, 0);
 
         if (speechRecognizer != null) {
             speechRecognizer.stopListening();
@@ -84,7 +91,11 @@ public class VoiceActivationService extends Service implements RecognitionListen
     @Override
     public void onDestroy() {
         super.onDestroy();
-        stopListening();
+        stopListening(); // Stop listening before destroying the service
+        if (speechRecognizer != null) {
+            speechRecognizer.destroy();
+            speechRecognizer = null; // Release the SpeechRecognizer object
+        }
         Toast.makeText(getApplicationContext(), "Service Stopped", Toast.LENGTH_LONG).show();
     }
 
@@ -212,7 +223,7 @@ public class VoiceActivationService extends Service implements RecognitionListen
         Log.i(TAG, "Send text method executing");
         // Retrieve phone numbers from Room database using ViewModel
         ContactsRepository contactsRepository = new ContactsRepository(getApplication());
-        contactsRepository.getAllContacts().observe((LifecycleOwner) this, contactLists -> {
+        contactsRepository.getAllContacts().observeForever(contactLists -> {
             for (ContactList contact : contactLists) {
                 String phoneNumber = contact.getPhoneNumber();
                 // Pass phone number to getCurrentLocation method
