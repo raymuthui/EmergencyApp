@@ -190,14 +190,15 @@ public class VoiceActivationService extends Service implements RecognitionListen
      locationCallback = new LocationCallback() {
          @Override
          public void onLocationResult(@NonNull LocationResult locationResult) {
-             if (locationResult != null) {
-                 Location location = locationResult.getLastLocation();
-                 if (location != null) {
-                     // Location retrieved, send text message with location
-                     sendSMS(phoneNumber, location);
-                     // Stop location updates after receiving the location
-                     stopLocationUpdates();
-                 }
+             Location location = locationResult.getLastLocation();
+             if (location != null) {
+                 // Location retrieved, send text message with location
+                 Log.i(TAG, "Location retrieved: " + location.getLatitude() + ", " + location.getLongitude());
+                 sendSMS(phoneNumber, location);
+                 // Stop location updates after receiving the location
+                 stopLocationUpdates();
+             } else {
+                 Log.e(TAG, "Location is null");
              }
          }
      };
@@ -206,7 +207,7 @@ public class VoiceActivationService extends Service implements RecognitionListen
         LocationRequest locationRequest = LocationRequest.create()
                 .setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY)
                 .setInterval(10000); // Update interval in milliseconds
-        // TODO: Check if this works
+        Log.i(TAG, "Requesting location updates");
         fusedLocationProviderClient.requestLocationUpdates(locationRequest, locationCallback, null);
     }
 
@@ -223,7 +224,7 @@ public class VoiceActivationService extends Service implements RecognitionListen
         Log.i(TAG, "Send text method executing");
         // Retrieve phone numbers from Room database using ViewModel
         ContactsRepository contactsRepository = new ContactsRepository(getApplication());
-        contactsRepository.getAllContacts().observeForever(contactLists -> {
+        contactsRepository.getAllContacts().observe((LifecycleOwner) this, contactLists -> {
             for (ContactList contact : contactLists) {
                 String phoneNumber = contact.getPhoneNumber();
                 // Pass phone number to getCurrentLocation method
@@ -240,7 +241,12 @@ public class VoiceActivationService extends Service implements RecognitionListen
         String message = "Help! I am in danger.\n" +
                 "My current location is: " + "https://maps.google.com/maps?q=" + latitude + "," + longitude +
                 "\nThis is an automated message.";
-        smsManager.sendTextMessage(phoneNumber, null, message, null, null);
+        try {
+            smsManager.sendTextMessage(phoneNumber, null, message, null, null);
+            Log.i(TAG, "SMS sent to: " + phoneNumber);
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to send SMS: " + e.getMessage());
+        }
     }
 
     // Your existing methods...
