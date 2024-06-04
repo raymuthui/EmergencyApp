@@ -9,6 +9,7 @@ import android.location.Location;
 import android.media.AudioManager;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
 import android.os.IBinder;
 import android.preference.PreferenceManager;
 import android.speech.RecognitionListener;
@@ -48,23 +49,27 @@ public class VoiceActivationService extends Service implements RecognitionListen
 
         mAudioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
 
-        speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this);
-        speechRecognizer.setRecognitionListener(this);
+        initializeSpeechRecognizer();
 
         // Start continuous listening
         startListening();
 
     }
-    private void startListening() {
-//        try {
-//            mAudioManager.setStreamVolume(AudioManager.STREAM_RING, AudioManager.ADJUST_MUTE, 0);
-//        } catch (SecurityException e) {
-//            // Handle the security exception (e.g., show a message to the user)
-//            Log.e(TAG, "SecurityException: Not allowed to change Do Not Disturb state");
-//            // Optionally, revert to default behavior or inform the user
-//        }
 
-        // Continue with your other logic
+    private void initializeSpeechRecognizer() {
+        if (speechRecognizer != null) {
+            speechRecognizer.destroy();
+        }
+        speechRecognizer = SpeechRecognizer.createSpeechRecognizer(this);
+        speechRecognizer.setRecognitionListener(this);
+    }
+
+    private void startListening() {
+        if (speechRecognizer == null) {
+            initializeSpeechRecognizer();
+        }
+
+        mAudioManager.setStreamVolume(AudioManager.STREAM_RING, AudioManager.ADJUST_MUTE, 0);
         speechRecognizer.startListening(createRecognizerIntent());
     }
 
@@ -187,21 +192,19 @@ public class VoiceActivationService extends Service implements RecognitionListen
     private void getCurrentLocation(String phoneNumber) {
      fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
 
-     locationCallback = new LocationCallback() {
-         @Override
-         public void onLocationResult(@NonNull LocationResult locationResult) {
-             Location location = locationResult.getLastLocation();
-             if (location != null) {
-                 // Location retrieved, send text message with location
-                 Log.i(TAG, "Location retrieved: " + location.getLatitude() + ", " + location.getLongitude());
-                 sendSMS(phoneNumber, location);
-                 // Stop location updates after receiving the location
-                 stopLocationUpdates();
-             } else {
-                 Log.e(TAG, "Location is null");
-             }
-         }
-     };
+        locationCallback = new LocationCallback() {
+            @Override
+            public void onLocationResult(@NonNull LocationResult locationResult) {
+                Location location = locationResult.getLastLocation();
+                if (location != null) {
+                    Log.i(TAG, "Location retrieved: " + location.getLatitude() + ", " + location.getLongitude());
+                    sendSMS(phoneNumber, location);
+                    stopLocationUpdates();
+                } else {
+                    Log.e(TAG, "Location is null");
+                }
+            }
+        };
 
      // Request location updates
         LocationRequest locationRequest = LocationRequest.create()
@@ -224,12 +227,13 @@ public class VoiceActivationService extends Service implements RecognitionListen
         Log.i(TAG, "Send text method executing");
         // Retrieve phone numbers from Room database using ViewModel
         ContactsRepository contactsRepository = new ContactsRepository(getApplication());
-        contactsRepository.getAllContacts().observe((LifecycleOwner) this, contactLists -> {
-            for (ContactList contact : contactLists) {
-                String phoneNumber = contact.getPhoneNumber();
-                // Pass phone number to getCurrentLocation method
-                getCurrentLocation(phoneNumber);
-            }
+        new Handler(getMainLooper()).post(() -> {
+           contactsRepository.getAllContacts().observeForever(contactLists -> {
+               for (ContactList contact : contactLists) {
+                   String phoneNumber = contact.getPhoneNumber();
+                   getCurrentLocation(phoneNumber);
+               }
+           });
         });
     }
 
