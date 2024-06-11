@@ -8,6 +8,7 @@ import android.content.SharedPreferences;
 import android.location.Location;
 import android.media.AudioManager;
 import android.net.Uri;
+import android.os.Binder;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
@@ -40,6 +41,7 @@ public class VoiceActivationService extends Service implements RecognitionListen
     private static final String TAG = "VoiceActivationService";
     private FusedLocationProviderClient fusedLocationProviderClient;
     private LocationCallback locationCallback;
+    private final IBinder binder = new LocalBinder();
 
     @Override
     public void onCreate() {
@@ -64,7 +66,7 @@ public class VoiceActivationService extends Service implements RecognitionListen
         speechRecognizer.setRecognitionListener(this);
     }
 
-    private void startListening() {
+    public void startListening() {
         if (speechRecognizer == null) {
             initializeSpeechRecognizer();
         }
@@ -83,7 +85,7 @@ public class VoiceActivationService extends Service implements RecognitionListen
         return recognizerIntent;
     }
 
-    private void stopListening() {
+    public void stopListening() {
         mAudioManager.setStreamVolume(AudioManager.STREAM_RING, AudioManager.ADJUST_UNMUTE, 0);
 
         if (speechRecognizer != null) {
@@ -112,7 +114,7 @@ public class VoiceActivationService extends Service implements RecognitionListen
 
     @Override
     public IBinder onBind(Intent intent) {
-        throw new UnsupportedOperationException("Not yet implemented");
+        return binder;
     }
 
     @Override
@@ -143,9 +145,26 @@ public class VoiceActivationService extends Service implements RecognitionListen
     @Override
     public void onError(int error) {
         Log.e(TAG, "Speech recognition error: " + error);
-        // Handle recognition errors
-        // Restart listening after an error occurs
-        startListening();
+
+        switch (error) {
+//            case SpeechRecognizer.ERROR_NO_MATCH:
+//                Log.e(TAG, "No recognition result matched.");
+//                // Provide feedback to the user or retry listening
+//                Toast.makeText(getApplicationContext(), "No match found. Please try again.", Toast.LENGTH_SHORT).show();
+//                break;
+//
+//            case SpeechRecognizer.ERROR_RECOGNIZER_BUSY:
+//                Log.e(TAG, "Recognition service is busy.");
+//                // Retry after a delay
+//                new Handler().postDelayed(this::startListening, 1000);
+//                break;
+
+            default:
+                Log.e(TAG, "Other speech recognition error: " + error);
+                // Retry immediately for other errors
+                startListening();
+                break;
+        }
     }
 
     @Override
@@ -184,6 +203,7 @@ public class VoiceActivationService extends Service implements RecognitionListen
                 sendTextWithLocation();
                 //storeVoiceRecordings();
                 // ... (other actions)
+                //break;
             }
         }
     }
@@ -276,6 +296,12 @@ public class VoiceActivationService extends Service implements RecognitionListen
             Toast.makeText(getApplicationContext(),
                     "Invalid phone number. Please enter a valid phone number in the settings.",
                     Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    public class LocalBinder extends Binder {
+        public VoiceActivationService getService() {
+            return VoiceActivationService.this;
         }
     }
 

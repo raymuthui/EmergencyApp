@@ -1,4 +1,4 @@
-package com.example.InstaSOS.ui.notifications;
+package com.example.InstaSOS.ui.recordings;
 
 import android.os.Bundle;
 import android.view.LayoutInflater;
@@ -10,22 +10,22 @@ import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 
-import com.example.InstaSOS.databinding.FragmentNotificationsBinding;
+import com.example.InstaSOS.databinding.FragmentRecordingsBinding;
 
-public class NotificationsFragment extends Fragment {
+public class RecordingsFragment extends Fragment {
 
-    private FragmentNotificationsBinding binding;
+    private FragmentRecordingsBinding binding;
 
     public View onCreateView(@NonNull LayoutInflater inflater,
                              ViewGroup container, Bundle savedInstanceState) {
-        NotificationsViewModel notificationsViewModel =
-                new ViewModelProvider(this).get(NotificationsViewModel.class);
+        RecordingsViewModel recordingsViewModel =
+                new ViewModelProvider(this).get(RecordingsViewModel.class);
 
-        binding = FragmentNotificationsBinding.inflate(inflater, container, false);
+        binding = FragmentRecordingsBinding.inflate(inflater, container, false);
         View root = binding.getRoot();
 
         final TextView textView = binding.textNotifications;
-        notificationsViewModel.getText().observe(getViewLifecycleOwner(), textView::setText);
+        recordingsViewModel.getText().observe(getViewLifecycleOwner(), textView::setText);
         return root;
     }
 

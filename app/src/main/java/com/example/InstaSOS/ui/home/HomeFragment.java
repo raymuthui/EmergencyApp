@@ -3,13 +3,17 @@ package com.example.InstaSOS.ui.home;
 import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
+import android.content.ComponentName;
+import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
 import android.media.MediaRecorder;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
+import android.os.IBinder;
 import android.provider.MediaStore;
 import android.util.Log;
 import android.view.LayoutInflater;
@@ -26,6 +30,7 @@ import androidx.lifecycle.ViewModelProvider;
 
 import com.example.InstaSOS.R;
 import com.example.InstaSOS.databinding.FragmentHomeBinding;
+import com.example.InstaSOS.VoiceActivationService;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -38,12 +43,42 @@ public class HomeFragment extends Fragment {
     private static final int REQUEST_VIDEO_PERMISSION = 2;
 
     private FragmentHomeBinding binding;
+    private VoiceActivationService voiceActivationService;
+    private boolean isServiceBound = false;
 
-    public View onCreateView(@NonNull LayoutInflater inflater,
-                             ViewGroup container, Bundle savedInstanceState) {
-        HomeViewModel homeViewModel =
-                new ViewModelProvider(this).get(HomeViewModel.class);
+    private ServiceConnection serviceConnection = new ServiceConnection() {
+        @Override
+        public void onServiceConnected(ComponentName name, IBinder service) {
+            VoiceActivationService.LocalBinder binder = (VoiceActivationService.LocalBinder) service;
+            voiceActivationService = binder.getService();
+            isServiceBound = true;
+        }
 
+        @Override
+        public void onServiceDisconnected(ComponentName name) {
+            voiceActivationService = null;
+            isServiceBound = false;
+        }
+    };
+
+    @Override
+    public void onAttach(@NonNull Context context) {
+        super.onAttach(context);
+        Intent intent = new Intent(context, VoiceActivationService.class);
+        context.bindService(intent, serviceConnection, Context.BIND_AUTO_CREATE);
+    }
+
+    @Override
+    public void onDetach() {
+        super.onDetach();
+        if (isServiceBound) {
+            requireContext().unbindService(serviceConnection);
+            isServiceBound = false;
+        }
+    }
+
+    public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
+        HomeViewModel homeViewModel = new ViewModelProvider(this).get(HomeViewModel.class);
         binding = FragmentHomeBinding.inflate(inflater, container, false);
         View root = binding.getRoot();
 
@@ -69,7 +104,7 @@ public class HomeFragment extends Fragment {
                         launchAudioRecorder();
                         break;
                     case 1:
-                        checkAndRequestVideoPermissions();
+                        startVideoRecording();
                         break;
                 }
             }
@@ -78,25 +113,32 @@ public class HomeFragment extends Fragment {
     }
 
     private void launchAudioRecorder() {
+        if (isServiceBound && voiceActivationService != null) {
+            voiceActivationService.stopListening();
+        }
+
         Intent intent = new Intent(MediaStore.Audio.Media.RECORD_SOUND_ACTION);
         if (intent.resolveActivity(requireContext().getPackageManager()) != null) {
-            startActivity(intent);
+            startActivityForResult(intent, REQUEST_AUDIO_PERMISSION);
         } else {
             Toast.makeText(requireContext(), "No audio recording app found.", Toast.LENGTH_SHORT).show();
         }
     }
 
-    private void checkAndRequestVideoPermissions() {
-        if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED ||
-                ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(requireActivity(), new String[]{Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO}, REQUEST_VIDEO_PERMISSION);
-        } else {
-            startVideoRecording();
-        }
-    }
+//    private void checkAndRequestVideoPermissions() {
+//        if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED ||
+//                ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+//            ActivityCompat.requestPermissions(requireActivity(), new String[]{Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO}, REQUEST_VIDEO_PERMISSION);
+//        } else {
+//            startVideoRecording();
+//        }
+//    }
 
     private void startVideoRecording() {
-        // Code to start video recording
+        if (isServiceBound && voiceActivationService != null) {
+            voiceActivationService.stopListening();
+        }
+
         Intent intent = new Intent(MediaStore.ACTION_VIDEO_CAPTURE);
         if (intent.resolveActivity(requireContext().getPackageManager()) != null) {
             startActivityForResult(intent, REQUEST_VIDEO_PERMISSION);
@@ -104,16 +146,26 @@ public class HomeFragment extends Fragment {
             Toast.makeText(requireContext(), "No video recording app found.", Toast.LENGTH_SHORT).show();
         }
     }
+
     @Override
     public void onActivityResult(int requestCode, int resultCode, Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
-        if (requestCode == REQUEST_VIDEO_PERMISSION && resultCode == Activity.RESULT_OK) {
+
+        if (isServiceBound && voiceActivationService != null) {
+            voiceActivationService.startListening();
+        }
+
+        if (requestCode == REQUEST_AUDIO_PERMISSION && resultCode == Activity.RESULT_OK) {
+            Uri audioUri = data.getData();
+            // Do something with the recorded audio URI, such as save it or upload it
+            Toast.makeText(requireContext(), "Audio recorded successfully.", Toast.LENGTH_SHORT).show();
+        } else if (requestCode == REQUEST_VIDEO_PERMISSION && resultCode == Activity.RESULT_OK) {
             Uri videoUri = data.getData();
             // Do something with the recorded video URI, such as save it or upload it
             saveVideoToInternalStorage(videoUri);
             Toast.makeText(requireContext(), "Video recorded successfully.", Toast.LENGTH_SHORT).show();
         } else {
-            Toast.makeText(requireContext(), "Video recording cancelled.", Toast.LENGTH_SHORT).show();
+            Toast.makeText(requireContext(), "Recording cancelled.", Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -145,7 +197,6 @@ public class HomeFragment extends Fragment {
             Toast.makeText(requireContext(), "Error saving video to internal storage.", Toast.LENGTH_SHORT).show();
         }
     }
-
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {

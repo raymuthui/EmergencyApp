@@ -11,7 +11,7 @@ class ContactsRepository {
     private LiveData<List<ContactList>> allContacts;
 
     ContactsRepository(Application application) {
-        FemiguardRoomDatabase db = FemiguardRoomDatabase.getDatabase(application);
+        InstaSOSRoomDatabase db = InstaSOSRoomDatabase.getDatabase(application);
         contactListDao = db.contactListDao();
         allContacts = contactListDao.getAlphabetizedContacts();
     }
@@ -21,15 +21,15 @@ class ContactsRepository {
     }
 
     void insert(ContactList contactList) {
-        FemiguardRoomDatabase.databaseWriteExecutor.execute(() -> contactListDao.insert(contactList));
+        InstaSOSRoomDatabase.databaseWriteExecutor.execute(() -> contactListDao.insert(contactList));
     }
 
     void update(ContactList contactList) {
-        FemiguardRoomDatabase.databaseWriteExecutor.execute(() -> contactListDao.update(contactList));
+        InstaSOSRoomDatabase.databaseWriteExecutor.execute(() -> contactListDao.update(contactList));
     }
 
     void delete(ContactList contactList) {
-        FemiguardRoomDatabase.databaseWriteExecutor.execute(() -> contactListDao.delete(contactList));
+        InstaSOSRoomDatabase.databaseWriteExecutor.execute(() -> contactListDao.delete(contactList));
     }
 
 }

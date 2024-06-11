@@ -50,7 +50,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private boolean checkPermissions() {
-        String[] permissions = {Manifest.permission.RECORD_AUDIO, Manifest.permission.CALL_PHONE, Manifest.permission.SEND_SMS, Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION};
+        String[] permissions = {Manifest.permission.RECORD_AUDIO, Manifest.permission.CAMERA, Manifest.permission.CALL_PHONE, Manifest.permission.SEND_SMS, Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION};
         List<String> permissionsToRequest = new ArrayList<>();
 
         for (String permission : permissions) {

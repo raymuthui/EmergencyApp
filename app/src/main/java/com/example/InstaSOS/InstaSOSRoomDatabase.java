@@ -10,20 +10,20 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 @Database(entities = {ContactList.class}, version = 1, exportSchema = false)
-public abstract class FemiguardRoomDatabase extends RoomDatabase {
+public abstract class InstaSOSRoomDatabase extends RoomDatabase {
     public abstract ContactListDao contactListDao();
 
-    public static volatile FemiguardRoomDatabase INSTANCE;
+    public static volatile InstaSOSRoomDatabase INSTANCE;
     public static final int NUMBER_OF_THREADS = 4;
     static final ExecutorService databaseWriteExecutor =
             Executors.newFixedThreadPool(NUMBER_OF_THREADS);
 
-    static FemiguardRoomDatabase getDatabase(final Context context) {
+    static InstaSOSRoomDatabase getDatabase(final Context context) {
         if (INSTANCE == null) {
-            synchronized (FemiguardRoomDatabase.class) {
+            synchronized (InstaSOSRoomDatabase.class) {
                 if (INSTANCE == null) {
                     INSTANCE = Room.databaseBuilder(context.getApplicationContext(),
-                            FemiguardRoomDatabase.class, "femiguard_database")
+                            InstaSOSRoomDatabase.class, "femiguard_database")
                             .build();
                 }
             }
