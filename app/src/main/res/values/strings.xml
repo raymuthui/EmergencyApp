@@ -6,4 +6,5 @@
     <string name="accessibility_service_label">InstaSOS</string>
     <string name="accessibility_service_description">Press volume up and down buttons simultaneously for 3 seconds to initiate InstaSOS</string>
     <string name="cab_hailing_activity_label">Request cab</string>
+    <string name="button_text">SOS</string>
 </resources>
