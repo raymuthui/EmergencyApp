@@ -4,34 +4,40 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
-import androidx.lifecycle.ViewModelProvider;
+import androidx.viewpager2.widget.ViewPager2;
 
-import com.example.InstaSOS.databinding.FragmentRecordingsBinding;
+import com.example.InstaSOS.R;
+import com.google.android.material.tabs.TabLayout;
+import com.google.android.material.tabs.TabLayoutMediator;
 
 public class RecordingsFragment extends Fragment {
 
-    private FragmentRecordingsBinding binding;
-
-    public View onCreateView(@NonNull LayoutInflater inflater,
-                             ViewGroup container, Bundle savedInstanceState) {
-        RecordingsViewModel recordingsViewModel =
-                new ViewModelProvider(this).get(RecordingsViewModel.class);
-
-        binding = FragmentRecordingsBinding.inflate(inflater, container, false);
-        View root = binding.getRoot();
-
-        final TextView textView = binding.textNotifications;
-        recordingsViewModel.getText().observe(getViewLifecycleOwner(), textView::setText);
-        return root;
-    }
-
+    @Nullable
     @Override
-    public void onDestroyView() {
-        super.onDestroyView();
-        binding = null;
+    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
+        View root = inflater.inflate(R.layout.fragment_recordings, container, false);
+
+        TabLayout tabLayout = root.findViewById(R.id.tabLayout);
+        ViewPager2 viewPager = root.findViewById(R.id.viewPager);
+
+        RecordingsPagerAdapter adapter = new RecordingsPagerAdapter(this);
+        viewPager.setAdapter(adapter);
+
+        new TabLayoutMediator(tabLayout, viewPager, (tab, position) -> {
+            switch (position) {
+                case 0:
+                    tab.setText("Audio Recordings");
+                    break;
+                case 1:
+                    tab.setText("Video Recordings");
+                    break;
+            }
+        }).attach();
+
+        return root;
     }
 }

@@ -1,6 +1,5 @@
 package com.example.InstaSOS.ui.home;
 
-import android.Manifest;
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.ComponentName;
@@ -9,13 +8,10 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.ServiceConnection;
 import android.content.pm.PackageManager;
-import android.media.MediaRecorder;
 import android.net.Uri;
 import android.os.Bundle;
-import android.os.Environment;
 import android.os.IBinder;
 import android.provider.MediaStore;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -23,8 +19,6 @@ import android.widget.Button;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
-import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 
@@ -46,7 +40,7 @@ public class HomeFragment extends Fragment {
     private VoiceActivationService voiceActivationService;
     private boolean isServiceBound = false;
 
-    private ServiceConnection serviceConnection = new ServiceConnection() {
+    private final ServiceConnection serviceConnection = new ServiceConnection() {
         @Override
         public void onServiceConnected(ComponentName name, IBinder service) {
             VoiceActivationService.LocalBinder binder = (VoiceActivationService.LocalBinder) service;
@@ -84,29 +78,21 @@ public class HomeFragment extends Fragment {
 
         // Add SOS button click listener
         Button sosButton = root.findViewById(R.id.sosButton);
-        sosButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                showOptionsDialog();
-            }
-        });
+        sosButton.setOnClickListener(v -> showOptionsDialog());
         return root;
     }
 
     private void showOptionsDialog() {
         AlertDialog.Builder builder = new AlertDialog.Builder(requireContext());
         builder.setTitle("Choose Option");
-        builder.setItems(new CharSequence[]{"Record Audio", "Record Video"}, new DialogInterface.OnClickListener() {
-            @Override
-            public void onClick(DialogInterface dialog, int which) {
-                switch (which) {
-                    case 0:
-                        launchAudioRecorder();
-                        break;
-                    case 1:
-                        startVideoRecording();
-                        break;
-                }
+        builder.setItems(new CharSequence[]{"Record Audio", "Record Video"}, (dialog, which) -> {
+            switch (which) {
+                case 0:
+                    launchAudioRecorder();
+                    break;
+                case 1:
+                    startVideoRecording();
+                    break;
             }
         });
         builder.create().show();
@@ -124,16 +110,6 @@ public class HomeFragment extends Fragment {
             Toast.makeText(requireContext(), "No audio recording app found.", Toast.LENGTH_SHORT).show();
         }
     }
-
-//    private void checkAndRequestVideoPermissions() {
-//        if (ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED ||
-//                ContextCompat.checkSelfPermission(requireContext(), Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-//            ActivityCompat.requestPermissions(requireActivity(), new String[]{Manifest.permission.CAMERA, Manifest.permission.RECORD_AUDIO}, REQUEST_VIDEO_PERMISSION);
-//        } else {
-//            startVideoRecording();
-//        }
-//    }
-
     private void startVideoRecording() {
         if (isServiceBound && voiceActivationService != null) {
             voiceActivationService.stopListening();
@@ -157,7 +133,8 @@ public class HomeFragment extends Fragment {
 
         if (requestCode == REQUEST_AUDIO_PERMISSION && resultCode == Activity.RESULT_OK) {
             Uri audioUri = data.getData();
-            // Do something with the recorded audio URI, such as save it or upload it
+            // Save the audio file to internal storage
+            saveAudioToInternalStorage(audioUri);
             Toast.makeText(requireContext(), "Audio recorded successfully.", Toast.LENGTH_SHORT).show();
         } else if (requestCode == REQUEST_VIDEO_PERMISSION && resultCode == Activity.RESULT_OK) {
             Uri videoUri = data.getData();
@@ -166,6 +143,37 @@ public class HomeFragment extends Fragment {
             Toast.makeText(requireContext(), "Video recorded successfully.", Toast.LENGTH_SHORT).show();
         } else {
             Toast.makeText(requireContext(), "Recording cancelled.", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void saveAudioToInternalStorage(Uri audioUri) {
+        try {
+            InputStream inputStream = requireContext().getContentResolver().openInputStream(audioUri);
+
+            // Create the destination directory if it doesn't exist
+            File recordingsDir = new File(requireContext().getFilesDir(), "InstaSOS/Recordings/Audios");
+            if (!recordingsDir.exists()) {
+                recordingsDir.mkdirs(); // Create the directory if it doesn't exist
+            }
+
+            // Generate a unique filename for the saved audio file
+            String audioFileName = "audio_record_" + System.currentTimeMillis() + ".m4a";
+            File destAudioFile = new File(recordingsDir, audioFileName);
+
+            FileOutputStream outputStream = new FileOutputStream(destAudioFile);
+            byte[] buffer = new byte[1024];
+            int length;
+            while (true) {
+                assert inputStream != null;
+                if (!((length = inputStream.read(buffer)) > 0)) break;
+                outputStream.write(buffer, 0, length);
+            }
+            inputStream.close();
+            outputStream.close();
+            Toast.makeText(requireContext(), "Audio saved: " + destAudioFile.getAbsolutePath(), Toast.LENGTH_SHORT).show();
+        } catch (IOException e) {
+            e.printStackTrace();
+            Toast.makeText(requireContext(), "Error saving audio to internal storage.", Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -186,7 +194,9 @@ public class HomeFragment extends Fragment {
             FileOutputStream outputStream = new FileOutputStream(destVideoFile);
             byte[] buffer = new byte[1024];
             int length;
-            while ((length = inputStream.read(buffer)) > 0) {
+            while (true) {
+                assert inputStream != null;
+                if (!((length = inputStream.read(buffer)) > 0)) break;
                 outputStream.write(buffer, 0, length);
             }
             inputStream.close();
