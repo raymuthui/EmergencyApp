@@ -12,7 +12,6 @@ import android.os.Binder;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.IBinder;
-import android.preference.PreferenceManager;
 import android.speech.RecognitionListener;
 import android.speech.RecognizerIntent;
 import android.speech.SpeechRecognizer;
@@ -21,7 +20,6 @@ import android.util.Log;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
-import androidx.lifecycle.LifecycleOwner;
 
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationCallback;
@@ -35,27 +33,22 @@ public class VoiceActivationService extends Service implements RecognitionListen
 
     private SpeechRecognizer speechRecognizer;
     private SharedPreferences sharedPreferences;
-    private Intent recognizerIntent;
     private AudioManager mAudioManager;
 
     private static final String TAG = "VoiceActivationService";
     private FusedLocationProviderClient fusedLocationProviderClient;
     private LocationCallback locationCallback;
     private final IBinder binder = new LocalBinder();
+    private int originalVolume;
 
     @Override
     public void onCreate() {
         super.onCreate();
-
-        sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this);
-
+        sharedPreferences = getSharedPreferences("com.example.InstaSOS", Context.MODE_PRIVATE);
         mAudioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
-
+        originalVolume = mAudioManager.getStreamVolume(AudioManager.STREAM_RING);
         initializeSpeechRecognizer();
-
-        // Start continuous listening
         startListening();
-
     }
 
     private void initializeSpeechRecognizer() {
@@ -70,11 +63,9 @@ public class VoiceActivationService extends Service implements RecognitionListen
         if (speechRecognizer == null) {
             initializeSpeechRecognizer();
         }
-
-        mAudioManager.setStreamVolume(AudioManager.STREAM_RING, AudioManager.ADJUST_MUTE, 0);
+        mAudioManager.setStreamVolume(AudioManager.STREAM_RING, 0, 0);
         speechRecognizer.startListening(createRecognizerIntent());
     }
-
 
     private Intent createRecognizerIntent() {
         Intent recognizerIntent = new Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH);
@@ -86,8 +77,7 @@ public class VoiceActivationService extends Service implements RecognitionListen
     }
 
     public void stopListening() {
-        mAudioManager.setStreamVolume(AudioManager.STREAM_RING, AudioManager.ADJUST_UNMUTE, 0);
-
+        mAudioManager.setStreamVolume(AudioManager.STREAM_RING, originalVolume, 0);
         if (speechRecognizer != null) {
             speechRecognizer.stopListening();
             speechRecognizer.cancel();
@@ -98,10 +88,10 @@ public class VoiceActivationService extends Service implements RecognitionListen
     @Override
     public void onDestroy() {
         super.onDestroy();
-        stopListening(); // Stop listening before destroying the service
+        stopListening();
         if (speechRecognizer != null) {
             speechRecognizer.destroy();
-            speechRecognizer = null; // Release the SpeechRecognizer object
+            speechRecognizer = null;
         }
         Toast.makeText(getApplicationContext(), "Service Stopped", Toast.LENGTH_LONG).show();
     }
@@ -118,100 +108,66 @@ public class VoiceActivationService extends Service implements RecognitionListen
     }
 
     @Override
-    public void onReadyForSpeech(Bundle params) {
-        // Handle when the recognizer is ready for speech
-    }
+    public void onReadyForSpeech(Bundle params) {}
 
     @Override
-    public void onBeginningOfSpeech() {
-        // Handle the beginning of speech
-    }
+    public void onBeginningOfSpeech() {}
 
     @Override
-    public void onRmsChanged(float rmsdB) {
-        // Handle RMS changes if needed
-    }
+    public void onRmsChanged(float rmsdB) {}
 
     @Override
-    public void onBufferReceived(byte[] buffer) {
-        // Handle Buffer
-    }
+    public void onBufferReceived(byte[] buffer) {}
 
     @Override
-    public void onEndOfSpeech() {
-        // Handle the end of speech
-    }
+    public void onEndOfSpeech() {}
 
     @Override
     public void onError(int error) {
         Log.e(TAG, "Speech recognition error: " + error);
-
         switch (error) {
-//            case SpeechRecognizer.ERROR_NO_MATCH:
-//                Log.e(TAG, "No recognition result matched.");
-//                // Provide feedback to the user or retry listening
-//                Toast.makeText(getApplicationContext(), "No match found. Please try again.", Toast.LENGTH_SHORT).show();
-//                break;
-//
-//            case SpeechRecognizer.ERROR_RECOGNIZER_BUSY:
-//                Log.e(TAG, "Recognition service is busy.");
-//                // Retry after a delay
-//                new Handler().postDelayed(this::startListening, 1000);
-//                break;
-
+            case SpeechRecognizer.ERROR_NO_MATCH:
+                Log.e(TAG, "No recognition result matched.");
+                Toast.makeText(getApplicationContext(), "No match found. Please try again.", Toast.LENGTH_SHORT).show();
+                break;
+            case SpeechRecognizer.ERROR_RECOGNIZER_BUSY:
+                Log.e(TAG, "Recognition service is busy.");
+                new Handler().postDelayed(this::startListening, 1000);
+                return;
             default:
                 Log.e(TAG, "Other speech recognition error: " + error);
-                // Retry immediately for other errors
-                startListening();
-                break;
         }
+        new Handler().postDelayed(this::startListening, 500);
     }
 
     @Override
     public void onResults(Bundle results) {
-        // Handle speech recognition results
         ArrayList<String> matches = results.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION);
-        assert matches != null;
-        process(matches);
-
-        // Restart listening after processing results
-        startListening();
+        if (matches != null) {
+            process(matches);
+        }
+        new Handler().postDelayed(this::startListening, 500);
     }
 
     @Override
-    public void onPartialResults(Bundle partialResults) {
-
-    }
+    public void onPartialResults(Bundle partialResults) {}
 
     @Override
-    public void onEvent(int eventType, Bundle params) {
-
-    }
-
-    // Other RecognitionListener methods...
+    public void onEvent(int eventType, Bundle params) {}
 
     private void process(ArrayList<String> suggestedWords) {
-        // Your existing processing logic here
-        // ...
-
-        // Example: check for the wake word "emergency"
         for (String word : suggestedWords) {
             if (word.contains("emergency")) {
-                // Trigger your emergency functions
-                //makeCall();
-                //getCurrentLocation();
+                makeCall();
                 sendTextWithLocation();
-                //storeVoiceRecordings();
-                // ... (other actions)
-                //break;
+                break;
             }
         }
     }
 
     @SuppressLint("MissingPermission")
     private void getCurrentLocation(String phoneNumber) {
-     fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
-
+        fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
         locationCallback = new LocationCallback() {
             @Override
             public void onLocationResult(@NonNull LocationResult locationResult) {
@@ -225,11 +181,8 @@ public class VoiceActivationService extends Service implements RecognitionListen
                 }
             }
         };
-
-     // Request location updates
-        LocationRequest locationRequest = LocationRequest.create()
-                .setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY)
-                .setInterval(10000); // Update interval in milliseconds
+        LocationRequest locationRequest = new LocationRequest.Builder(LocationRequest.PRIORITY_HIGH_ACCURACY, 10000)
+                .build();
         Log.i(TAG, "Requesting location updates");
         fusedLocationProviderClient.requestLocationUpdates(locationRequest, locationCallback, null);
     }
@@ -240,31 +193,22 @@ public class VoiceActivationService extends Service implements RecognitionListen
         }
     }
 
-    private void storeVoiceRecordings() {
-    }
-
     private void sendTextWithLocation() {
         Log.i(TAG, "Send text method executing");
-        // Retrieve phone numbers from Room database using ViewModel
         ContactsRepository contactsRepository = new ContactsRepository(getApplication());
-        new Handler(getMainLooper()).post(() -> {
-           contactsRepository.getAllContacts().observeForever(contactLists -> {
-               for (ContactList contact : contactLists) {
-                   String phoneNumber = contact.getPhoneNumber();
-                   getCurrentLocation(phoneNumber);
-               }
-           });
-        });
+        new Handler(getMainLooper()).post(() -> contactsRepository.getAllContacts().observeForever(contactLists -> {
+            for (ContactList contact : contactLists) {
+                String phoneNumber = contact.getPhoneNumber();
+                getCurrentLocation(phoneNumber);
+            }
+        }));
     }
 
     private void sendSMS(String phoneNumber, Location location) {
         double latitude = location.getLatitude();
         double longitude = location.getLongitude();
-
         SmsManager smsManager = SmsManager.getDefault();
-        String message = "Help! I am in danger.\n" +
-                "My current location is: " + "https://maps.google.com/maps?q=" + latitude + "," + longitude +
-                "\nThis is an automated message.";
+        String message = "Help! I am in danger.\nMy current location is: https://maps.google.com/maps?q=" + latitude + "," + longitude + "\nThis is an automated message.";
         try {
             smsManager.sendTextMessage(phoneNumber, null, message, null, null);
             Log.i(TAG, "SMS sent to: " + phoneNumber);
@@ -273,14 +217,10 @@ public class VoiceActivationService extends Service implements RecognitionListen
         }
     }
 
-    // Your existing methods...
-
     private void makeCall() {
         Log.i(TAG, "Make call");
-        String phoneNumber = sharedPreferences.getString("localEmergency", "");
+        String phoneNumber = sharedPreferences.getString("localEmergency", "+254713208001");
         Log.i(TAG, "Phone number is: " + phoneNumber);
-
-        // Check if phone number is not empty and is valid
         if (!phoneNumber.isEmpty() && phoneNumber.matches("^\\+[0-9]+$")) {
             Intent phoneIntent = new Intent(Intent.ACTION_CALL);
             phoneIntent.setData(Uri.parse("tel:" + phoneNumber));
@@ -289,13 +229,10 @@ public class VoiceActivationService extends Service implements RecognitionListen
                 startActivity(phoneIntent);
                 Log.i(TAG, "Finished making a call.");
             } catch (android.content.ActivityNotFoundException ex) {
-                Toast.makeText(getApplicationContext(),
-                        "Call failed, please try again later.", Toast.LENGTH_SHORT).show();
+                Toast.makeText(getApplicationContext(), "Call failed, please try again later.", Toast.LENGTH_SHORT).show();
             }
         } else {
-            Toast.makeText(getApplicationContext(),
-                    "Invalid phone number. Please enter a valid phone number in the settings.",
-                    Toast.LENGTH_SHORT).show();
+            Toast.makeText(getApplicationContext(), "Invalid phone number. Please enter a valid phone number in the settings.", Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -304,8 +241,4 @@ public class VoiceActivationService extends Service implements RecognitionListen
             return VoiceActivationService.this;
         }
     }
-
-
-    // ... (other methods)
-
 }

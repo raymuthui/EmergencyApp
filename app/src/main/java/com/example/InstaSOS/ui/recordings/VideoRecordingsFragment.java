@@ -1,5 +1,7 @@
 package com.example.InstaSOS.ui.recordings;
 
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -9,6 +11,7 @@ import android.widget.ListView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.content.FileProvider;
 import androidx.fragment.app.Fragment;
 
 import com.example.InstaSOS.R;
@@ -29,6 +32,11 @@ public class VideoRecordingsFragment extends Fragment {
         ArrayAdapter<String> adapter = new ArrayAdapter<>(requireContext(), android.R.layout.simple_list_item_1, recordings);
         listView.setAdapter(adapter);
 
+        listView.setOnItemClickListener((parent, view, position, id) -> {
+            String fileName = recordings.get(position);
+            playVideo(fileName);
+        });
+
         return root;
     }
 
@@ -44,5 +52,16 @@ public class VideoRecordingsFragment extends Fragment {
             }
         }
         return recordings;
+    }
+
+    private void playVideo(String fileName) {
+        File recordingsDir = new File(requireContext().getFilesDir(), "InstaSOS/Recordings/Videos");
+        File videoFile = new File(recordingsDir, fileName);
+        Uri videoUri = FileProvider.getUriForFile(requireContext(), requireContext().getPackageName() + ".fileprovider", videoFile);
+
+        Intent intent = new Intent(Intent.ACTION_VIEW);
+        intent.setDataAndType(videoUri, "video/*");
+        intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        startActivity(intent);
     }
 }
