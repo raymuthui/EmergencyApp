@@ -18,7 +18,7 @@
         tools:layout="@layout/fragment_contacts" />
 
     <fragment
-        android:id="@+id/navigation_notifications"
+        android:id="@+id/navigation_recordings"
         android:name="com.example.InstaSOS.ui.recordings.RecordingsFragment"
         android:label="@string/title_recordings"
         tools:layout="@layout/fragment_recordings" />

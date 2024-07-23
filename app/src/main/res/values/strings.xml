@@ -11,4 +11,7 @@
     <string name="press_emergency">Press the button to send SOS</string>
     <string name="police_title">Call Police</string>
     <string name="hail_cab">Call Cab</string>
+    <string name="cab_image">cab</string>
+    <string name="forward_arrow">forward</string>
+    <string name="police_desc">police</string>
 </resources>

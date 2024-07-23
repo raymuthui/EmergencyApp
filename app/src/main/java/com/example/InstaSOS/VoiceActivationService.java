@@ -166,7 +166,7 @@ public class VoiceActivationService extends Service implements RecognitionListen
     }
 
     @SuppressLint("MissingPermission")
-    private void getCurrentLocation(String phoneNumber) {
+    private void getCurrentLocation() {
         fusedLocationProviderClient = LocationServices.getFusedLocationProviderClient(this);
         locationCallback = new LocationCallback() {
             @Override
@@ -174,7 +174,8 @@ public class VoiceActivationService extends Service implements RecognitionListen
                 Location location = locationResult.getLastLocation();
                 if (location != null) {
                     Log.i(TAG, "Location retrieved: " + location.getLatitude() + ", " + location.getLongitude());
-                    sendSMS(phoneNumber, location);
+                    LocationStorage.getInstance().setLocation(location.getLatitude(), location.getLongitude());
+                    sendSMSToAllContacts(location);
                     stopLocationUpdates();
                 } else {
                     Log.e(TAG, "Location is null");
@@ -195,11 +196,14 @@ public class VoiceActivationService extends Service implements RecognitionListen
 
     private void sendTextWithLocation() {
         Log.i(TAG, "Send text method executing");
+        getCurrentLocation();
+    }
+
+    private void sendSMSToAllContacts(Location location) {
         ContactsRepository contactsRepository = new ContactsRepository(getApplication());
         new Handler(getMainLooper()).post(() -> contactsRepository.getAllContacts().observeForever(contactLists -> {
             for (ContactList contact : contactLists) {
-                String phoneNumber = contact.getPhoneNumber();
-                getCurrentLocation(phoneNumber);
+                sendSMS(contact.getPhoneNumber(), location);
             }
         }));
     }
