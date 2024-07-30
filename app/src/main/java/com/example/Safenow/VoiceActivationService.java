@@ -2,12 +2,9 @@ package com.example.Safenow;
 
 import android.annotation.SuppressLint;
 import android.app.Service;
-import android.content.ClipData;
 import android.content.Context;
 import android.content.Intent;
-import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
-import android.content.pm.ResolveInfo;
 import android.location.Location;
 import android.Manifest;
 import android.media.AudioManager;
@@ -26,7 +23,6 @@ import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
-import androidx.core.content.FileProvider;
 import androidx.lifecycle.ViewModelProvider;
 
 import com.google.android.gms.location.FusedLocationProviderClient;
@@ -38,12 +34,10 @@ import com.google.android.gms.location.LocationServices;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.List;
 
 public class VoiceActivationService extends Service implements RecognitionListener {
 
     private SpeechRecognizer speechRecognizer;
-    private SharedPreferences sharedPreferences;
     private AudioManager mAudioManager;
 
     private static final String TAG = "VoiceActivationService";
@@ -53,9 +47,8 @@ public class VoiceActivationService extends Service implements RecognitionListen
     private int originalVolume;
 
     private MediaRecorder mediaRecorder;
-    private File audioFile;
     private boolean isRecording = false;
-    private static final int RECORDING_DURATION_MS = 10 * 1000; // 3 minutes
+    private static final int RECORDING_DURATION_MS = 10 * 1000;
 
     private boolean emergencyActionsExecuted = false;
 
@@ -63,7 +56,6 @@ public class VoiceActivationService extends Service implements RecognitionListen
     @Override
     public void onCreate() {
         super.onCreate();
-        sharedPreferences = getSharedPreferences("com.example.Safenow", Context.MODE_PRIVATE);
         mAudioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
         originalVolume = mAudioManager.getStreamVolume(AudioManager.STREAM_RING);
         initializeSpeechRecognizer();
@@ -276,7 +268,7 @@ public class VoiceActivationService extends Service implements RecognitionListen
         mediaRecorder = new MediaRecorder();
         mediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
         mediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
-        audioFile = getOutputFile();
+        File audioFile = getOutputFile();
         mediaRecorder.setOutputFile(audioFile.getAbsolutePath());
         mediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
 
@@ -287,7 +279,7 @@ public class VoiceActivationService extends Service implements RecognitionListen
             Log.i(TAG, "Recording started.");
             Toast.makeText( this,"Recording started.", Toast.LENGTH_SHORT).show();
 
-            // Stop recording after 3 mminutes
+            // Stop recording after timeout
             new Handler().postDelayed(this::stopRecording, RECORDING_DURATION_MS);
         } catch (IOException e) {
             Log.e(TAG, "Recording failed: " + e.getMessage());
@@ -311,48 +303,7 @@ public class VoiceActivationService extends Service implements RecognitionListen
         isRecording =false;
         Log.i(TAG, "Recording stopped");
         Toast.makeText(this, "Recording stopped.", Toast.LENGTH_SHORT).show();
-
-//        // Send the audio file to contacts
-//        sendAudioToContacts();
     }
-
-    private void sendAudioToContacts() {
-        ContactsRepository contactsRepository = new ContactsRepository(getApplication());
-        new Handler(getMainLooper()).post(() -> contactsRepository.getAllContacts().observeForever(contactLists -> {
-            for (ContactList contact : contactLists) {
-                sendAudio(contact.getPhoneNumber());
-            }
-        }));
-    }
-
-    private void sendAudio(String phoneNumber) {
-        Uri audioUri = FileProvider.getUriForFile(this, "com.example.Safenow.fileprovider", audioFile);
-
-        // Grant URI permission to the receiving app
-        grantUriPermission(getPackageName(), audioUri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
-
-        Intent sendIntent = new Intent(Intent.ACTION_SEND);
-        sendIntent.setType("audio/mp4");
-        sendIntent.putExtra(Intent.EXTRA_STREAM, audioUri);
-        sendIntent.setClipData(ClipData.newUri(getContentResolver(), "Audio", audioUri));
-        sendIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
-        sendIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-
-        // Grant URI permissions to all resolved activities
-        List<ResolveInfo> resolveInfoList = getPackageManager().queryIntentActivities(sendIntent, PackageManager.MATCH_DEFAULT_ONLY);
-        for (ResolveInfo resolveInfo : resolveInfoList) {
-            String packageName = resolveInfo.activityInfo.packageName;
-            grantUriPermission(packageName, audioUri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
-        }
-
-        try {
-            startActivity(Intent.createChooser(sendIntent, "Send Audio").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
-            Log.i(TAG, "Audio sent to: " + phoneNumber);
-        } catch (Exception e) {
-            Log.e(TAG, "Failed to send audio: " + e.getMessage());
-        }
-    }
-
 
     public class LocalBinder extends Binder {
         public VoiceActivationService getService() {

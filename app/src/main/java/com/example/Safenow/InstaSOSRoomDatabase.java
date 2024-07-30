@@ -23,7 +23,7 @@ public abstract class InstaSOSRoomDatabase extends RoomDatabase {
             synchronized (InstaSOSRoomDatabase.class) {
                 if (INSTANCE == null) {
                     INSTANCE = Room.databaseBuilder(context.getApplicationContext(),
-                            InstaSOSRoomDatabase.class, "femiguard_database")
+                            InstaSOSRoomDatabase.class, "safenow_database")
                             .fallbackToDestructiveMigration()
                             .build();
                 }
