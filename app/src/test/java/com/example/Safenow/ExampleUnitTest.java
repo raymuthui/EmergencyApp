@@ -1,4 +1,4 @@
-package com.example.InstaSOS;
+package com.example.Safenow;
 
 import org.junit.Test;
 

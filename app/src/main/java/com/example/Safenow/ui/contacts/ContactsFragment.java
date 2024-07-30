@@ -1,4 +1,4 @@
-package com.example.InstaSOS.ui.contacts;
+package com.example.Safenow.ui.contacts;
 
 import android.app.Activity;
 import android.content.Intent;
@@ -16,9 +16,9 @@ import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.example.InstaSOS.ContactList;
-import com.example.InstaSOS.ContactsViewModel;
-import com.example.InstaSOS.R;
+import com.example.Safenow.ContactList;
+import com.example.Safenow.ContactsViewModel;
+import com.example.Safenow.R;
 import com.google.android.material.floatingactionbutton.FloatingActionButton;
 
 public class ContactsFragment extends Fragment{
@@ -62,17 +62,16 @@ public class ContactsFragment extends Fragment{
                 contactsViewModel.delete(adapter.getContactAt(viewHolder.getAdapterPosition()));
                 Toast.makeText(requireContext(), "Contact deleted", Toast.LENGTH_SHORT).show();
             }
-        }).
-                attachToRecyclerView(recyclerView);
-        adapter.setOnItemClickListener(contactList -> {
-            Intent intent = new Intent(requireContext(), NewContactActivity.class);
-            intent.putExtra(NewContactActivity.EXTRA_ID, contactList.getId());
-            intent.putExtra(NewContactActivity.EXTRA_FIRST_NAME, contactList.getFirstName());
-            intent.putExtra(NewContactActivity.EXTRA_LAST_NAME, contactList.getLastName());
-            intent.putExtra(NewContactActivity.EXTRA_PHONE_NUMBER, contactList.getPhoneNumber());
-
-            startActivityForResult(intent, EDIT_CONTACT_REQUEST);
-
+        }).attachToRecyclerView(recyclerView);
+        adapter.setOnItemClickListener((contactList, isChecked) -> {
+            if (isChecked) {
+                // Unset the default contact first
+                contactsViewModel.unsetAllDefaultContacts();
+                contactList.setDefault(true);
+            } else {
+                contactList.setDefault(false);
+            }
+            contactsViewModel.update(contactList);
         });
 
         return root;

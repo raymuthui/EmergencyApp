@@ -1,4 +1,4 @@
-package com.example.InstaSOS;
+package com.example.Safenow;
 
 import android.app.Application;
 
@@ -24,4 +24,9 @@ public class ContactsViewModel extends AndroidViewModel {
     public void insert(ContactList contacts) { mRepository.insert(contacts); }
     public void update(ContactList contacts) { mRepository.update(contacts); }
     public void delete(ContactList contacts) { mRepository.delete(contacts); }
+
+    public void setDefaultContact(int id) { mRepository.setDefaultContact(id); }
+    public void unsetDefaultContact(int id) { mRepository.unsetDefaultContact(id); }
+    public void unsetAllDefaultContacts() { mRepository.unsetAllDefaultContacts(); }
+
 }

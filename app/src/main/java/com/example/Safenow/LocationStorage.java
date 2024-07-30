@@ -1,4 +1,4 @@
-package com.example.InstaSOS;
+package com.example.Safenow;
 
 public class LocationStorage {
     private static final LocationStorage INSTANCE = new LocationStorage();

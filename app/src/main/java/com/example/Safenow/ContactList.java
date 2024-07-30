@@ -1,4 +1,4 @@
-package com.example.InstaSOS;
+package com.example.Safenow;
 
 import androidx.room.Entity;
 import androidx.room.PrimaryKey;
@@ -11,6 +11,7 @@ public class ContactList {
     public String firstName;
     public String lastName;
     public String phoneNumber;
+    private boolean isDefault;
 
     public int getId() {
         return id;
@@ -24,6 +25,7 @@ public class ContactList {
         this.firstName = firstName;
         this.lastName = lastName;
         this.phoneNumber = phoneNumber;
+        this.isDefault = false;
     }
 
     public void setFirstName(String firstName) {
@@ -37,6 +39,7 @@ public class ContactList {
     public void setPhoneNumber(String phoneNumber) {
         this.phoneNumber = phoneNumber;
     }
+    public void setDefault(boolean isDefault) { this.isDefault = isDefault; }
 
     public String getFirstName() {
         return firstName;
@@ -49,4 +52,5 @@ public class ContactList {
     public String getPhoneNumber() {
         return phoneNumber;
     }
+    public boolean isDefault() {return isDefault;}
 }

@@ -3,11 +3,11 @@ plugins {
 }
 
 android {
-    namespace = "com.example.InstaSOS"
+    namespace = "com.example.Safenow"
     compileSdk = 34
 
     defaultConfig {
-        applicationId = "com.example.InstaSOS"
+        applicationId = "com.example.Safenow"
         minSdk = 27
         targetSdk = 34
         versionCode = 1

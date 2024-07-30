@@ -1,4 +1,4 @@
-package com.example.InstaSOS;
+package com.example.Safenow;
 
 import androidx.lifecycle.LiveData;
 import androidx.room.Dao;
@@ -26,4 +26,14 @@ public interface ContactListDao {
 
     @Query("SELECT * FROM ContactList ORDER BY firstName ASC")
     LiveData<List<ContactList>> getAlphabetizedContacts();
+
+    @Query("UPDATE ContactList SET isDefault = 1 WHERE id = :id")
+    void setDefaultContact(int id);
+
+    @Query("UPDATE ContactList SET isDefault = 0 WHERE id = :id")
+    void unsetDefaultContact(int id);
+
+    @Query("UPDATE ContactList SET isDefault = 0 WHERE isDefault = 1")
+    void unsetAllDefaultContacts();
+
 }

@@ -1,4 +1,4 @@
-package com.example.InstaSOS.ui.recordings;
+package com.example.Safenow.ui.recordings;
 
 import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;

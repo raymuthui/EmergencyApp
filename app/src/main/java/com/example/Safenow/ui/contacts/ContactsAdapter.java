@@ -1,4 +1,4 @@
-package com.example.InstaSOS.ui.contacts;
+package com.example.Safenow.ui.contacts;
 
 import android.view.ViewGroup;
 
@@ -6,13 +6,13 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.DiffUtil;
 import androidx.recyclerview.widget.ListAdapter;
 
-import com.example.InstaSOS.ContactList;
-import com.example.InstaSOS.ContactsViewHolder;
+import com.example.Safenow.ContactList;
+import com.example.Safenow.ContactsViewHolder;
 
 public class ContactsAdapter extends ListAdapter<ContactList, ContactsViewHolder> {
 
     public interface OnItemClickListener {
-        void onItemClick(ContactList contactList);
+        void onItemClick(ContactList contactList, boolean isChecked);
     }
 
     private OnItemClickListener listener;
@@ -34,8 +34,16 @@ public class ContactsAdapter extends ListAdapter<ContactList, ContactsViewHolder
     @Override
     public void onBindViewHolder(@NonNull ContactsViewHolder holder, int position) {
         ContactList contact = getContactAt(position);
-        //TODO: Review contact viewmodel
         holder.bind(contact);
+
+        holder.defaultCheckBox.setChecked(contact.isDefault());
+        holder.defaultCheckBox.setOnCheckedChangeListener((buttonView, isChecked) -> {
+            if (listener != null && isChecked) {
+                listener.onItemClick(contact, isChecked);
+            } else {
+                holder.defaultCheckBox.setChecked(contact.isDefault()); // Revert to original state
+            }
+        });
     }
 
     public ContactList getContactAt(int position) {

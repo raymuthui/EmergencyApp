@@ -1,4 +1,4 @@
-package com.example.InstaSOS;
+package com.example.Safenow;
 
 import android.content.Context;
 
@@ -9,7 +9,7 @@ import androidx.room.RoomDatabase;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-@Database(entities = {ContactList.class}, version = 1, exportSchema = false)
+@Database(entities = {ContactList.class}, version = 2, exportSchema = false)
 public abstract class InstaSOSRoomDatabase extends RoomDatabase {
     public abstract ContactListDao contactListDao();
 
@@ -24,6 +24,7 @@ public abstract class InstaSOSRoomDatabase extends RoomDatabase {
                 if (INSTANCE == null) {
                     INSTANCE = Room.databaseBuilder(context.getApplicationContext(),
                             InstaSOSRoomDatabase.class, "femiguard_database")
+                            .fallbackToDestructiveMigration()
                             .build();
                 }
             }

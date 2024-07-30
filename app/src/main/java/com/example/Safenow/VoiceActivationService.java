@@ -1,12 +1,17 @@
-package com.example.InstaSOS;
+package com.example.Safenow;
 
 import android.annotation.SuppressLint;
 import android.app.Service;
+import android.content.ClipData;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
 import android.location.Location;
+import android.Manifest;
 import android.media.AudioManager;
+import android.media.MediaRecorder;
 import android.net.Uri;
 import android.os.Binder;
 import android.os.Bundle;
@@ -20,6 +25,9 @@ import android.util.Log;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.core.content.ContextCompat;
+import androidx.core.content.FileProvider;
+import androidx.lifecycle.ViewModelProvider;
 
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.location.LocationCallback;
@@ -27,7 +35,10 @@ import com.google.android.gms.location.LocationRequest;
 import com.google.android.gms.location.LocationResult;
 import com.google.android.gms.location.LocationServices;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.ArrayList;
+import java.util.List;
 
 public class VoiceActivationService extends Service implements RecognitionListener {
 
@@ -41,10 +52,18 @@ public class VoiceActivationService extends Service implements RecognitionListen
     private final IBinder binder = new LocalBinder();
     private int originalVolume;
 
+    private MediaRecorder mediaRecorder;
+    private File audioFile;
+    private boolean isRecording = false;
+    private static final int RECORDING_DURATION_MS = 10 * 1000; // 3 minutes
+
+    private boolean emergencyActionsExecuted = false;
+
+
     @Override
     public void onCreate() {
         super.onCreate();
-        sharedPreferences = getSharedPreferences("com.example.InstaSOS", Context.MODE_PRIVATE);
+        sharedPreferences = getSharedPreferences("com.example.Safenow", Context.MODE_PRIVATE);
         mAudioManager = (AudioManager) getSystemService(Context.AUDIO_SERVICE);
         originalVolume = mAudioManager.getStreamVolume(AudioManager.STREAM_RING);
         initializeSpeechRecognizer();
@@ -128,7 +147,7 @@ public class VoiceActivationService extends Service implements RecognitionListen
         switch (error) {
             case SpeechRecognizer.ERROR_NO_MATCH:
                 Log.e(TAG, "No recognition result matched.");
-                Toast.makeText(getApplicationContext(), "No match found. Please try again.", Toast.LENGTH_SHORT).show();
+                //Toast.makeText(getApplicationContext(), "No match found. Please try again.", Toast.LENGTH_SHORT).show();
                 break;
             case SpeechRecognizer.ERROR_RECOGNIZER_BUSY:
                 Log.e(TAG, "Recognition service is busy.");
@@ -158,7 +177,9 @@ public class VoiceActivationService extends Service implements RecognitionListen
     private void process(ArrayList<String> suggestedWords) {
         for (String word : suggestedWords) {
             if (word.contains("emergency")) {
+                emergencyActionsExecuted = false;
                 makeCall();
+                startRecording();
                 sendTextWithLocation();
                 break;
             }
@@ -202,8 +223,11 @@ public class VoiceActivationService extends Service implements RecognitionListen
     private void sendSMSToAllContacts(Location location) {
         ContactsRepository contactsRepository = new ContactsRepository(getApplication());
         new Handler(getMainLooper()).post(() -> contactsRepository.getAllContacts().observeForever(contactLists -> {
-            for (ContactList contact : contactLists) {
-                sendSMS(contact.getPhoneNumber(), location);
+            if (!emergencyActionsExecuted) {
+                for (ContactList contact : contactLists) {
+                    sendSMS(contact.getPhoneNumber(), location);
+                }
+                emergencyActionsExecuted = true;
             }
         }));
     }
@@ -223,22 +247,112 @@ public class VoiceActivationService extends Service implements RecognitionListen
 
     private void makeCall() {
         Log.i(TAG, "Make call");
-        String phoneNumber = sharedPreferences.getString("localEmergency", "+254713208001");
-        Log.i(TAG, "Phone number is: " + phoneNumber);
-        if (!phoneNumber.isEmpty() && phoneNumber.matches("^\\+[0-9]+$")) {
-            Intent phoneIntent = new Intent(Intent.ACTION_CALL);
-            phoneIntent.setData(Uri.parse("tel:" + phoneNumber));
-            phoneIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            try {
-                startActivity(phoneIntent);
-                Log.i(TAG, "Finished making a call.");
-            } catch (android.content.ActivityNotFoundException ex) {
-                Toast.makeText(getApplicationContext(), "Call failed, please try again later.", Toast.LENGTH_SHORT).show();
+        ContactsViewModel contactsViewModel = ViewModelProvider.AndroidViewModelFactory.getInstance(getApplication()).create(ContactsViewModel.class);
+        contactsViewModel.getAllContacts().observeForever(contacts -> {
+            if (!emergencyActionsExecuted) {
+                for (ContactList contact : contacts) {
+                    if (contact.isDefault()) {
+                        Uri phoneUri = Uri.parse("tel:" + contact.getPhoneNumber());
+                        Intent callIntent = new Intent(Intent.ACTION_CALL, phoneUri);
+                        callIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+                        if (ContextCompat.checkSelfPermission(this, Manifest.permission.CALL_PHONE) == PackageManager.PERMISSION_GRANTED) {
+                            startActivity(callIntent);
+                        } else {
+                            // Handle permission request (You might need to use another mechanism to request permissions in a Service)
+                            Toast.makeText(this, "Permission denied to make calls.", Toast.LENGTH_SHORT).show();
+                        }
+                        return;
+                    }
+                }
+                Toast.makeText(this, "No default contact set.", Toast.LENGTH_SHORT).show();
+                emergencyActionsExecuted = true;
             }
-        } else {
-            Toast.makeText(getApplicationContext(), "Invalid phone number. Please enter a valid phone number in the settings.", Toast.LENGTH_SHORT).show();
+        });
+    }
+
+    private void startRecording() {
+        if (isRecording) return;
+
+        mediaRecorder = new MediaRecorder();
+        mediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
+        mediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);
+        audioFile = getOutputFile();
+        mediaRecorder.setOutputFile(audioFile.getAbsolutePath());
+        mediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);
+
+        try {
+            mediaRecorder.prepare();
+            mediaRecorder.start();
+            isRecording = true;
+            Log.i(TAG, "Recording started.");
+            Toast.makeText( this,"Recording started.", Toast.LENGTH_SHORT).show();
+
+            // Stop recording after 3 mminutes
+            new Handler().postDelayed(this::stopRecording, RECORDING_DURATION_MS);
+        } catch (IOException e) {
+            Log.e(TAG, "Recording failed: " + e.getMessage());
         }
     }
+
+    private File getOutputFile() {
+        File recordingsDir = new File(getFilesDir(), "Safenow/Recordings/Audios");
+        if (!recordingsDir.exists() && !recordingsDir.mkdirs()) {
+            Log.e(TAG, "Failed to create directory: " + recordingsDir.getAbsolutePath());
+        }
+        return new File(recordingsDir, "audio_record_" + System.currentTimeMillis() + ".m4a");
+    }
+
+    private void stopRecording() {
+        if (!isRecording) return;
+
+        mediaRecorder.stop();
+        mediaRecorder.release();
+        mediaRecorder = null;
+        isRecording =false;
+        Log.i(TAG, "Recording stopped");
+        Toast.makeText(this, "Recording stopped.", Toast.LENGTH_SHORT).show();
+
+//        // Send the audio file to contacts
+//        sendAudioToContacts();
+    }
+
+    private void sendAudioToContacts() {
+        ContactsRepository contactsRepository = new ContactsRepository(getApplication());
+        new Handler(getMainLooper()).post(() -> contactsRepository.getAllContacts().observeForever(contactLists -> {
+            for (ContactList contact : contactLists) {
+                sendAudio(contact.getPhoneNumber());
+            }
+        }));
+    }
+
+    private void sendAudio(String phoneNumber) {
+        Uri audioUri = FileProvider.getUriForFile(this, "com.example.Safenow.fileprovider", audioFile);
+
+        // Grant URI permission to the receiving app
+        grantUriPermission(getPackageName(), audioUri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
+
+        Intent sendIntent = new Intent(Intent.ACTION_SEND);
+        sendIntent.setType("audio/mp4");
+        sendIntent.putExtra(Intent.EXTRA_STREAM, audioUri);
+        sendIntent.setClipData(ClipData.newUri(getContentResolver(), "Audio", audioUri));
+        sendIntent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        sendIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+
+        // Grant URI permissions to all resolved activities
+        List<ResolveInfo> resolveInfoList = getPackageManager().queryIntentActivities(sendIntent, PackageManager.MATCH_DEFAULT_ONLY);
+        for (ResolveInfo resolveInfo : resolveInfoList) {
+            String packageName = resolveInfo.activityInfo.packageName;
+            grantUriPermission(packageName, audioUri, Intent.FLAG_GRANT_READ_URI_PERMISSION);
+        }
+
+        try {
+            startActivity(Intent.createChooser(sendIntent, "Send Audio").addFlags(Intent.FLAG_ACTIVITY_NEW_TASK));
+            Log.i(TAG, "Audio sent to: " + phoneNumber);
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to send audio: " + e.getMessage());
+        }
+    }
+
 
     public class LocalBinder extends Binder {
         public VoiceActivationService getService() {

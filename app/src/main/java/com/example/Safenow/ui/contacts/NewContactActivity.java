@@ -1,4 +1,4 @@
-package com.example.InstaSOS.ui.contacts;
+package com.example.Safenow.ui.contacts;
 
 import android.content.Intent;
 import android.os.Bundle;
@@ -8,7 +8,7 @@ import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
 
-import com.example.InstaSOS.R;
+import com.example.Safenow.R;
 
 public class NewContactActivity extends AppCompatActivity {
 

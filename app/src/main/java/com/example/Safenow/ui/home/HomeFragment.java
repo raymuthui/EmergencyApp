@@ -1,4 +1,4 @@
-package com.example.InstaSOS.ui.home;
+package com.example.Safenow.ui.home;
 
 import android.app.Activity;
 import android.app.AlertDialog;
@@ -24,10 +24,10 @@ import androidx.annotation.NonNull;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 
-import com.example.InstaSOS.LocationStorage;
-import com.example.InstaSOS.R;
-import com.example.InstaSOS.databinding.FragmentHomeBinding;
-import com.example.InstaSOS.VoiceActivationService;
+import com.example.Safenow.LocationStorage;
+import com.example.Safenow.R;
+import com.example.Safenow.databinding.FragmentHomeBinding;
+import com.example.Safenow.VoiceActivationService;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -183,7 +183,7 @@ public class HomeFragment extends Fragment {
 
     private void saveAudioToInternalStorage(Uri audioUri) {
         try (InputStream inputStream = requireContext().getContentResolver().openInputStream(audioUri);
-             FileOutputStream outputStream = new FileOutputStream(getOutputFile("InstaSOS/Recordings/Audios", "audio_record_", ".m4a"))) {
+             FileOutputStream outputStream = new FileOutputStream(getOutputFile("Safenow/Recordings/Audios", "audio_record_", ".m4a"))) {
 
             byte[] buffer = new byte[1024];
             int length;
@@ -201,7 +201,7 @@ public class HomeFragment extends Fragment {
 
     private void saveVideoToInternalStorage(Uri videoUri) {
         try (InputStream inputStream = requireContext().getContentResolver().openInputStream(videoUri);
-             FileOutputStream outputStream = new FileOutputStream(getOutputFile("InstaSOS/Recordings/Videos", "video_record_", ".mp4"))) {
+             FileOutputStream outputStream = new FileOutputStream(getOutputFile("Safenow/Recordings/Videos", "video_record_", ".mp4"))) {
 
             byte[] buffer = new byte[1024];
             int length;
@@ -233,7 +233,7 @@ public class HomeFragment extends Fragment {
     }
 
     private void callPolice() {
-        String phoneNumber = "tel:+254713208001";
+        String phoneNumber = "tel:999";
         Intent callIntent = new Intent(Intent.ACTION_CALL);
         callIntent.setData(Uri.parse(phoneNumber));
         startActivity(callIntent);

@@ -13,6 +13,6 @@ dependencyResolutionManagement {
     }
 }
 
-rootProject.name = "InstaSOS"
+rootProject.name = "Safenow"
 include(":app")
  

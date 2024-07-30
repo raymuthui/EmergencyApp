@@ -1,4 +1,4 @@
-package com.example.InstaSOS.ui.recordings;
+package com.example.Safenow.ui.recordings;
 
 import android.os.Bundle;
 import android.view.LayoutInflater;
@@ -10,7 +10,7 @@ import androidx.annotation.Nullable;
 import androidx.fragment.app.Fragment;
 import androidx.viewpager2.widget.ViewPager2;
 
-import com.example.InstaSOS.R;
+import com.example.Safenow.R;
 import com.google.android.material.tabs.TabLayout;
 import com.google.android.material.tabs.TabLayoutMediator;
 

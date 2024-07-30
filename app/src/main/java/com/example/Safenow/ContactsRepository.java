@@ -1,4 +1,4 @@
-package com.example.InstaSOS;
+package com.example.Safenow;
 
 import android.app.Application;
 
@@ -32,4 +32,15 @@ class ContactsRepository {
         InstaSOSRoomDatabase.databaseWriteExecutor.execute(() -> contactListDao.delete(contactList));
     }
 
+    public void setDefaultContact(int id) {
+        InstaSOSRoomDatabase.databaseWriteExecutor.execute(() -> contactListDao.setDefaultContact(id));
+    }
+
+    public void unsetDefaultContact(int id) {
+        InstaSOSRoomDatabase.databaseWriteExecutor.execute(() -> contactListDao.unsetDefaultContact(id));
+    }
+
+    public void unsetAllDefaultContacts() {
+        InstaSOSRoomDatabase.databaseWriteExecutor.execute(() -> contactListDao.unsetAllDefaultContacts());
+    }
 }
